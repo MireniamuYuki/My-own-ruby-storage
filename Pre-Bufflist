@@ -1,0 +1,179 @@
+
+# Pre-Bufflist By MireniamuYuki
+# It's just a sketch :)
+module Bufflist
+  
+  # 是否显示在菜单选项中
+  ONMENU = true
+  
+  # “状态图鉴”的用语
+  VOCAB = "图鉴"
+  
+end
+
+  
+#===============================================================
+
+
+# Window_MenuCommand
+class Window_MenuCommand
+  
+  # 新增指令
+  if Bufflist::ONMENU
+    alias :myk20180430_aoc :add_original_commands
+    def add_original_commands
+      myk20180430_aoc
+      add_command(Bufflist::VOCAB, :bufflist)
+    end
+  end
+end
+
+# Scene_Menu
+class Scene_Menu
+  
+  # 指令“状态图鉴”
+  if Bufflist::ONMENU
+    alias :myk20180430_ccw :create_command_window
+    def create_command_window
+      myk20180430_ccw
+      @command_window.set_handler(:bufflist, method(:command_bufflist))
+    end
+  
+    def command_bufflist
+      SceneManager.call(Scene_Bufflist)
+    end
+  end
+end
+
+# Scene_Buff
+class Scene_Bufflist < Scene_MenuBase
+  
+  attr_reader :last_index # 光标上一次停留的index
+
+  # 初始化
+  def start
+    super
+    @last_index = -1
+    create_windows
+    create_help_window
+  end
+  
+  # 生成窗口
+  def create_windows
+    @top_window = Window_BufflistTop.new
+    @list_window = Window_BufflistMain.new
+    @list_window.set_handler(:cancel, method(:return_scene))
+    end
+  
+  # 生成帮助窗口
+  def create_help_window
+    item = @list_window.item
+    @help_window = Window_Help.new(4)
+    @help_window.viewport = @viewport
+    @help_window.y = Graphics.height - @help_window.fitting_height(4)
+    @help_window.create_contents
+    @help_window.set_text(item.description)
+  end
+  
+  # 更新帮助窗口
+  def update_help_window
+    return if @last_index == @list_window.index
+    item = @list_window.item
+    @last_index = @list_window.index
+    @list_window.refresh
+    @help_window.set_text(item.description)
+    @help_window.update
+  end
+  
+  # 更新
+  def update
+    update_help_window
+    super
+  end
+  
+  # 退出
+  def return_scene
+    super
+  end
+end
+
+# 标题框
+class Window_BufflistTop < Window_Base
+  
+  # 初始化
+  def initialize
+    super(0,0, Graphics.width, fitting_height(1))
+    rect = text_size(Bufflist::VOCAB)
+    rect.x = (contents_width - rect.width) / 2
+    rect.y = 0
+    draw_text(rect,Bufflist::VOCAB,1)
+  end
+  
+end
+
+# 主界面
+class Window_BufflistMain < Window_Selectable
+  
+  # 初始化
+  def initialize
+    super(0, fitting_height(1), Graphics.width, Graphics.height - fitting_height(6))
+    @data = []
+    make_item_list
+    refresh
+    select_last
+    activate
+  end
+  
+  # 获取列数
+  def col_max
+    2
+  end
+  
+  # 获取项目数
+  def item_max
+    @data ? @data.size : 1
+  end
+  
+  # 判断物品是否可用
+  def enable?(item)
+    $game_party.usable?(item)
+  end
+  
+  # 生成物品列表
+  def make_item_list
+    @data = $game_party.all_items
+  end
+  
+  # 绘制项目
+  def draw_item(index)
+    item = @data[index]
+    if item
+      rect = item_rect(index)
+      rect.width -= 4
+      draw_item_name(item, rect.x, rect.y, enable?(item))
+    end
+  end
+  
+  # 获取道具
+  def item
+    @data && index >= 0 ? @data[index] : nil
+  end
+  
+  # 获取光标所指物品的信息
+  def select(index)
+    super
+    item = @data[index]
+  end
+  
+  # 返回最后一个选项的位置
+  def select_last
+    select(0)
+  end
+  
+  # 刷新
+  def refresh
+    make_item_list
+    super
+  end
+end
+  
